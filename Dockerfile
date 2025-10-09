@@ -1,4 +1,4 @@
-FROM thecatlady/webhook:2.8.1
+FROM thecatlady/webhook:2.8.2
 WORKDIR     /etc/webhook
 COPY assets /etc/webhook/assets
 ENV SHARED_DIR_PATH /etc/webhook/shared
