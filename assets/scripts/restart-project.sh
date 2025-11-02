@@ -31,6 +31,7 @@ PROJECT_DOCKER_COMPOSE_FILE=$PROJECT_CACHE_PATH/docker-compose.yml
 
 # RESTART PROCESS
 
+docker compose -f "$PROJECT_DOCKER_COMPOSE_FILE" -p "$PROJECT_NAME" pull
 docker compose -f "$PROJECT_DOCKER_COMPOSE_FILE" -p "$PROJECT_NAME" down
 docker compose -f "$PROJECT_DOCKER_COMPOSE_FILE" -p "$PROJECT_NAME" up -d
 
