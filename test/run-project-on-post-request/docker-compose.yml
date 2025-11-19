@@ -1,5 +1,3 @@
-version: '2.4'
-
 services:
   webhook:
     image: generaltao725/docker-webhook:test
@@ -13,4 +11,5 @@ services:
      - .env
     environment:
      - DOCKER_USERNAME=generaltao725
+     - DEPLOY_DEFAULT_ENV=stage
       

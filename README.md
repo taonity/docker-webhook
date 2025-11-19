@@ -15,8 +15,35 @@ An example of the usage of the image can be found in a [test](test/run-project-o
 ### Configuration 
  - `WEBHOOK_SECRET` - you have to create a webhook with a secret placed into its URL `http://<server_ip>/hooks/<webhook_secret>/docker-webhook`. The secret can be then loaded as an environment variable `WEBHOOK_SECRET` in `docker-webhook` service. The secret is used for security purposes.
  - `DOCKER_USERNAME` - an env var that contains your DockerHub username.
+ - `DEPLOY_DEFAULT_ENV` - (optional) the default environment to deploy to when no environment is specified in the webhook payload. Defaults to `stage` if not set.
  - `project-whitelist.list` - is a file with target image names being listed (without owner name). The tool will check if the list contains the image name from webhook details and will proceed         only on finding a match. Each image name should be written from the new line. The file should placed in `shared/config` folder and the `shared` folder should be mounted into `/etc/webhook/shared` of the container.
- - `envs` - a folder that loads env vars for each docker compose project. Envs should be stored in `.envs` file a placed in `shared/<image_name>/` folder. The `shared` folder should be mounted into `/etc/webhook/shared` of the container. This configuration is optional.
+ - `envs` - a folder that loads env vars for each docker compose project. Envs should be stored in `.envs` file a placed in `shared/<image_name>-<environment>/` folder (e.g., `shared/envs/myapp-stage/` or `shared/envs/myapp-prod/`). The `shared` folder should be mounted into `/etc/webhook/shared` of the container. This configuration is optional.
+
+### Multi-Environment Deployments (Stage/Prod)
+
+The webhook service supports deploying to multiple environments (e.g., stage and prod) from the same Docker image:
+
+- **Default behavior**: By default, webhooks deploy to the `stage` environment (or whatever `DEPLOY_DEFAULT_ENV` is set to).
+- **Production deployments**: To deploy to production, include an `environment` field with value `prod` in your webhook payload.
+- **Environment isolation**: Each environment maintains separate:
+  - Cache directories: `/etc/webhook/cache/<project>-<environment>`
+  - Docker Compose project names: `<project>-<environment>`
+  - Environment variable files: `shared/envs/<project>-<environment>/`
+
+**Example webhook payload for production deployment:**
+```json
+{
+  "push_data": {
+    "tag": "latest"
+  },
+  "repository": {
+    "name": "myapp"
+  },
+  "environment": "prod"
+}
+```
+
+When sending the webhook manually to trigger a production deployment, add `"environment": "prod"` to the JSON payload. Automatic webhooks from DockerHub will deploy to stage by default.
 
 ### Used in
  - [taonity/prodenv](https://github.com/taonity/prodenv)

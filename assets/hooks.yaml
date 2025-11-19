@@ -6,6 +6,11 @@
   pass-arguments-to-command:
   - source: payload
     name: repository.name
+  - source: payload
+    name: environment
+  pass-environment-to-command:
+  - source: string
+    envname: DEPLOY_DEFAULT_ENV
   trigger-rule:
     match:
       type: value

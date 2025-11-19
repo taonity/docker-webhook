@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 INPUT_PROJECT_NAME=$1
-PROJECT_WHITELIST=$(cat "$SHARED_DIR_PATH"/configs/project-whitelist.list)
+# Read whitelist and strip carriage returns (handle Windows line endings)
+PROJECT_WHITELIST=$(cat "$SHARED_DIR_PATH"/configs/project-whitelist.list | tr -d '\r')
 
 for PROJECT_NAME in $PROJECT_WHITELIST
 do
