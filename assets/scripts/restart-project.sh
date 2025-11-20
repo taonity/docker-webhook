@@ -46,11 +46,21 @@ else
 fi
 
 PROJECT_DOCKER_COMPOSE_FILE=$PROJECT_CACHE_PATH/docker-compose.yml
+PROJECT_DOCKER_COMPOSE_OVERRIDE=$PROJECT_CACHE_PATH/docker-compose.override.yml
 
 # RESTART PROCESS
 
-docker compose -f "$PROJECT_DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" pull
-docker compose -f "$PROJECT_DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" down
-docker compose -f "$PROJECT_DOCKER_COMPOSE_FILE" -p "$COMPOSE_PROJECT_NAME" up -d
+# Build docker compose command with override file if it exists
+COMPOSE_FILES="-f $PROJECT_DOCKER_COMPOSE_FILE"
+if [ -f "$PROJECT_DOCKER_COMPOSE_OVERRIDE" ]; then
+    echo "Docker compose override file found for [$PROJECT_NAME] environment [$ENVIRONMENT]"
+    COMPOSE_FILES="$COMPOSE_FILES -f $PROJECT_DOCKER_COMPOSE_OVERRIDE"
+else
+    echo "No docker compose override file for [$PROJECT_NAME] environment [$ENVIRONMENT]"
+fi
+
+docker compose $COMPOSE_FILES -p "$COMPOSE_PROJECT_NAME" pull
+docker compose $COMPOSE_FILES -p "$COMPOSE_PROJECT_NAME" down
+docker compose $COMPOSE_FILES -p "$COMPOSE_PROJECT_NAME" up -d
 
 

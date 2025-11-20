@@ -18,6 +18,7 @@ An example of the usage of the image can be found in a [test](test/run-project-o
  - `DEPLOY_DEFAULT_ENV` - (optional) the default environment to deploy to when no environment is specified in the webhook payload. Defaults to `stage` if not set.
  - `project-whitelist.list` - is a file with target image names being listed (without owner name). The tool will check if the list contains the image name from webhook details and will proceed         only on finding a match. Each image name should be written from the new line. The file should placed in `shared/config` folder and the `shared` folder should be mounted into `/etc/webhook/shared` of the container.
  - `envs` - a folder that loads env vars for each docker compose project. Envs should be stored in `.envs` file a placed in `shared/<image_name>-<environment>/` folder (e.g., `shared/envs/myapp-stage/` or `shared/envs/myapp-prod/`). The `shared` folder should be mounted into `/etc/webhook/shared` of the container. This configuration is optional.
+ - `docker-compose.override.yml` - (optional) you can place environment-specific Docker Compose override files in `shared/envs/<image_name>-<environment>/docker-compose.override.yml`. These override files will be automatically applied when deploying to that environment, allowing you to customize ports, volumes, environment variables, or any other Docker Compose settings per environment.
 
 ### Multi-Environment Deployments (Stage/Prod)
 
@@ -29,6 +30,7 @@ The webhook service supports deploying to multiple environments (e.g., stage and
   - Cache directories: `/etc/webhook/cache/<project>-<environment>`
   - Docker Compose project names: `<project>-<environment>`
   - Environment variable files: `shared/envs/<project>-<environment>/`
+  - Docker Compose override files: `shared/envs/<project>-<environment>/docker-compose.override.yml`
 
 **Example webhook payload for production deployment:**
 ```json

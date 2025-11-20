@@ -1,0 +1,6 @@
+services:
+  alpine:
+    ports:
+      - "8081:80"
+    environment:
+      - STAGE_PORT=8081

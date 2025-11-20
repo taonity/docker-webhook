@@ -88,6 +88,20 @@ if [[ $stage_env_check != *"TEST_ENV=stage-world"* ]]; then
 fi
 pass "Stage environment variables loaded correctly"
 
+# Verify stage docker-compose override was applied
+webhook_logs=$(docker compose logs webhook)
+if [[ $webhook_logs != *"Docker compose override file found for [webhook-test-image] environment [stage]"* ]]; then
+  fail "Stage docker-compose override file was not detected."
+fi
+pass "Stage docker-compose override file was applied"
+
+# Verify override file exists in cache
+stage_override_check=$(docker compose exec webhook test -f /etc/webhook/cache/webhook-test-image-stage/docker-compose.override.yml && echo "exists" || echo "not found")
+if [[ $stage_override_check != "exists" ]]; then
+  fail "Stage docker-compose override file was not copied to cache."
+fi
+pass "Stage docker-compose override file exists in cache"
+
 # Test 2: Production deployment
 info "Testing production deployment"
 responce=$(curl -X POST \
@@ -132,6 +146,20 @@ if [[ $prod_env_check != *"TEST_ENV=prod-world"* ]]; then
   fail "Prod environment file not loaded correctly."
 fi
 pass "Prod environment variables loaded correctly"
+
+# Verify prod does NOT have docker-compose override (testing absence of override)
+webhook_logs=$(docker compose logs webhook)
+if [[ $webhook_logs != *"No docker compose override file for [webhook-test-image] environment [prod]"* ]]; then
+  fail "Prod should not have docker-compose override file, but detection failed."
+fi
+pass "Prod correctly has no docker-compose override file"
+
+# Verify override file does NOT exist in prod cache
+prod_override_check=$(docker compose exec webhook test -f /etc/webhook/cache/webhook-test-image-prod/docker-compose.override.yml && echo "exists" || echo "not found")
+if [[ $prod_override_check == "exists" ]]; then
+  fail "Prod should not have docker-compose override file in cache."
+fi
+pass "Prod cache correctly has no docker-compose override file"
 
 pass "Both stage and prod containers are running independently"
 info "All tests passed!"
