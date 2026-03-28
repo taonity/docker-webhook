@@ -1,0 +1,53 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        description: 'The project (image) name to deploy (without owner prefix)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment (e.g. stage, prod)'
+        required: false
+        type: string
+        default: 'stage'
+    secrets:
+      WEBHOOK_URL:
+        description: 'Base URL of webhook server (e.g. https://myserver.com:9000)'
+        required: true
+      WEBHOOK_SECRET:
+        description: 'Webhook secret used in the URL path'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deployment of ${{ inputs.project_name }} to ${{ inputs.environment }}
+        run: |
+          echo "Deploying project [${{ inputs.project_name }}] to [${{ inputs.environment }}]"
+          echo "---"
+
+          HTTP_CODE=$(curl -s -o response.txt -w "%{http_code}" \
+            --max-time 300 \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "push_data": { "tag": "latest" },
+              "repository": { "name": "${{ inputs.project_name }}" },
+              "environment": "${{ inputs.environment }}"
+            }' \
+            "${{ secrets.WEBHOOK_URL }}/hooks/${{ secrets.WEBHOOK_SECRET }}/docker-webhook")
+
+          echo "--- Deployment logs ---"
+          cat response.txt
+          echo ""
+          echo "--- HTTP status: $HTTP_CODE ---"
+
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::error::Deployment failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "Deployment completed successfully"

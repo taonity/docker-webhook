@@ -1,0 +1,27 @@
+name: Deploy (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_name:
+        description: 'Project (image) name to deploy (without owner prefix)'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - stage
+          - prod
+        default: 'stage'
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy.yml
+    with:
+      project_name: ${{ inputs.project_name }}
+      environment: ${{ inputs.environment }}
+    secrets:
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}

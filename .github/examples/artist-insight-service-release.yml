@@ -1,0 +1,42 @@
+# Example: how to add deployment to artist-insight-service release.yml
+#
+# This shows how to call the reusable deploy workflow from docker-webhook repo
+# AFTER the existing image push steps in:
+# https://github.com/taonity/artist-insight-service/blob/main/.github/workflows/release.yml
+#
+# Required GitHub Secrets in artist-insight-service repo:
+#   WEBHOOK_URL    - e.g. https://myserver.com:9000
+#   WEBHOOK_SECRET - the secret from your docker-webhook setup
+#
+# The docker-webhook repo must be public or in the same org.
+
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    # ... existing build & push steps ...
+    permissions: write-all
+    strategy:
+      max-parallel: 1
+    concurrency:
+      group: ${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "build & push steps here"
+
+  deploy-stage:
+    needs: release
+    uses: taonity/docker-webhook/.github/workflows/deploy.yml@main
+    with:
+      project_name: artist-insight-service
+      environment: stage
+    secrets:
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}

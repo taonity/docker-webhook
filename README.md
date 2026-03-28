@@ -47,5 +47,49 @@ The webhook service supports deploying to multiple environments (e.g., stage and
 
 When sending the webhook manually to trigger a production deployment, add `"environment": "prod"` to the JSON payload. Automatic webhooks from DockerHub will deploy to stage by default.
 
+### GitHub Actions Integration
+
+The tool provides a reusable GitHub Actions workflow so you can trigger deployments from CI/CD pipelines and see deployment logs directly in GitHub.
+
+#### Setup
+
+1. Add these secrets to your GitHub repository (or organization):
+   - `WEBHOOK_URL` — base URL of your webhook server (e.g. `https://myserver.com:9000`)
+   - `WEBHOOK_SECRET` — the webhook secret used in the URL path
+
+2. If using DockerHub callbacks, you can **disable them** and rely on GitHub Actions instead for full control and log visibility.
+
+#### Usage
+
+Reference the reusable workflow from your project's release pipeline:
+
+```yaml
+jobs:
+  release:
+    # ... your build & push steps ...
+
+  deploy-stage:
+    needs: release
+    uses: taonity/docker-webhook/.github/workflows/deploy.yml@main
+    with:
+      project_name: myapp
+      environment: stage
+    secrets:
+      WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+      WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+```
+
+The deployment logs from docker-webhook are streamed back and visible in the GitHub Actions run.
+
+See a full [example](.github/examples/artist-insight-service-release.yml) for artist-insight-service.
+
+#### Manual deployments
+
+You can trigger deployments manually from the **docker-webhook** repo's Actions tab using the "Deploy (manual)" workflow. Select the project name and environment from the UI.
+
+#### Log visibility
+
+Since the webhook is configured with `stream-command-output: true`, the full deployment output (docker pull, compose down/up, etc.) is streamed as the HTTP response body and appears in the GitHub Actions step log.
+
 ### Used in
  - [taonity/prodenv](https://github.com/taonity/prodenv)
