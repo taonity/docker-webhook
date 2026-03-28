@@ -29,8 +29,7 @@ jobs:
           echo "Deploying project [${{ inputs.project_name }}] to [${{ inputs.environment }}]"
           echo "---"
 
-          HTTP_CODE=$(curl -s -o response.txt -w "%{http_code}" \
-            --max-time 300 \
+          curl --no-buffer --fail-with-body --max-time 300 \
             -X POST \
             -H "Content-Type: application/json" \
             -d '{
@@ -38,16 +37,7 @@ jobs:
               "repository": { "name": "${{ inputs.project_name }}" },
               "environment": "${{ inputs.environment }}"
             }' \
-            "${{ secrets.WEBHOOK_URL }}/hooks/${{ secrets.WEBHOOK_SECRET }}/docker-webhook")
+            "${{ secrets.WEBHOOK_URL }}/hooks/${{ secrets.WEBHOOK_SECRET }}/docker-webhook"
 
-          echo "--- Deployment logs ---"
-          cat response.txt
           echo ""
-          echo "--- HTTP status: $HTTP_CODE ---"
-
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "::error::Deployment failed with HTTP $HTTP_CODE"
-            exit 1
-          fi
-
-          echo "Deployment completed successfully"
+          echo "--- Deployment completed successfully ---"

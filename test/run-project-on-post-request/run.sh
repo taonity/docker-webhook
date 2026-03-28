@@ -27,7 +27,7 @@ done
 
 # Test 1: Default deployment (should go to stage)
 info "Testing default deployment (stage environment)"
-responce=$(curl -X POST \
+responce=$(curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{
       "repository": {
@@ -39,34 +39,11 @@ responce=$(curl -X POST \
   }' \
   http://localhost:9000/hooks/mysecret/docker-webhook)
 
-if [[ $responce != "A payload recieved" ]]; then
-  fail "Wrong response on POST request for stage deployment."
+if [[ $responce != *"Deploying project [webhook-test-image] to environment [stage]"* ]]; then
+  info "Response:"
+  echo "$responce"
+  fail "Stage deployment logs not found in response."
 fi
-pass "Stage webhook accepted"
-
-sleep 15
-
-webhook_logs=$(docker compose logs webhook)
-if [[ $webhook_logs != *"Deploying project [webhook-test-image] to environment [stage]"* ]]; then
-  info "Full webhook logs:"
-  echo "$webhook_logs"
-  fail "Failed to deploy to stage environment."
-fi
-pass "Deployed to stage environment"
-
-# Check if deployment finished
-if [[ $webhook_logs != *"finished handling mysecret/docker-webhook"* ]]; then
-  info "Full webhook logs:"
-  echo "$webhook_logs"
-  fail "Failed to finish handling the stage deployment request."
-fi
-
-# Check for any errors in the logs
-if [[ $webhook_logs == *"error"* ]]; then
-  info "Errors detected in webhook logs:"
-  echo "$webhook_logs" | grep -i error
-fi
-
 pass "Stage deployment completed"
 
 # Verify stage container was created (check both running and exited)
@@ -104,7 +81,7 @@ pass "Stage docker-compose override file exists in cache"
 
 # Test 2: Production deployment
 info "Testing production deployment"
-responce=$(curl -X POST \
+responce=$(curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{
       "repository": {
@@ -117,18 +94,12 @@ responce=$(curl -X POST \
   }' \
   http://localhost:9000/hooks/mysecret/docker-webhook)
 
-if [[ $responce != "A payload recieved" ]]; then
-  fail "Wrong response on POST request for prod deployment."
+if [[ $responce != *"Deploying project [webhook-test-image] to environment [prod]"* ]]; then
+  info "Response:"
+  echo "$responce"
+  fail "Prod deployment logs not found in response."
 fi
-pass "Prod webhook accepted"
-
-sleep 10
-
-webhook_logs=$(docker compose logs webhook)
-if [[ $webhook_logs != *"Deploying project [webhook-test-image] to environment [prod]"* ]]; then
-  fail "Failed to deploy to prod environment."
-fi
-pass "Deployed to prod environment"
+pass "Prod deployment completed"
 
 # Verify prod container was created (check both running and exited)
 sleep 5
