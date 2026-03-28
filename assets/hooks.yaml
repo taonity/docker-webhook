@@ -2,6 +2,7 @@
 - id: ${WEBHOOK_SECRET}/docker-webhook
   execute-command: "/etc/webhook/assets/scripts/restart-project.sh"
   command-working-directory: "/etc/webhook/assets/scripts"
+  include-command-output-in-response: true
   stream-command-output: true
   pass-arguments-to-command:
   - source: payload
