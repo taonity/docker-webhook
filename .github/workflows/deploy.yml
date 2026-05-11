@@ -30,6 +30,7 @@ jobs:
           echo "---"
 
           response_body_file="$(mktemp)"
+          trap 'rm -f "$response_body_file"' EXIT
 
           curl_exit=0
           http_code=$(curl --no-buffer --silent --show-error --max-time 600 \
@@ -50,7 +51,7 @@ jobs:
           echo ""
 
           if [ "$curl_exit" -ne 0 ]; then
-            echo "--- Deployment request failed before receiving a successful HTTP response ---"
+            echo "--- Deployment request failed due to network/transport error ---"
             exit "$curl_exit"
           fi
 
