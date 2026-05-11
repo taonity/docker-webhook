@@ -61,7 +61,7 @@ validate_compose_container_states() {
 
 wait_for_container_healthchecks() {
     local healthcheck_timeout=${DEPLOY_HEALTHCHECK_TIMEOUT:-0}
-    local deadline container_id service_name health_status has_healthcheck pending_healthchecks
+    local start_time current_time container_id service_name health_status has_healthcheck pending_healthchecks
 
     if ! [[ "$healthcheck_timeout" =~ ^[0-9]+$ ]]; then
         echo "WARN! DEPLOY_HEALTHCHECK_TIMEOUT must be a non-negative integer, got [$healthcheck_timeout]"
@@ -73,7 +73,7 @@ wait_for_container_healthchecks() {
     fi
 
     echo "Waiting up to [$healthcheck_timeout] seconds for container health checks"
-    deadline=$((SECONDS + healthcheck_timeout))
+    start_time=$(date +%s)
 
     while true; do
         has_healthcheck=false
@@ -120,7 +120,8 @@ wait_for_container_healthchecks() {
             return 0
         fi
 
-        if [ "$SECONDS" -ge "$deadline" ]; then
+        current_time=$(date +%s)
+        if [ $((current_time - start_time)) -ge "$healthcheck_timeout" ]; then
             echo "WARN! Timed out waiting [$healthcheck_timeout] seconds for container health checks"
             docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps
             exit 1

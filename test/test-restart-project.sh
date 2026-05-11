@@ -10,10 +10,11 @@ SCRIPT_DIR="$TMP_ROOT/scripts"
 MOCK_BIN="$TMP_ROOT/bin"
 SHARED_DIR="$TMP_ROOT/shared"
 WEBHOOK_ROOT="$TMP_ROOT/webhook"
+ESCAPED_WEBHOOK_ROOT=$(printf '%s\n' "$WEBHOOK_ROOT" | sed 's/[&#]/\\&/g')
 
 mkdir -p "$SCRIPT_DIR" "$MOCK_BIN" "$SHARED_DIR/envs" "$SHARED_DIR/configs" "$WEBHOOK_ROOT/cache"
 
-sed "s#/etc/webhook#$WEBHOOK_ROOT#g" "$REPO_ROOT/assets/scripts/restart-project.sh" > "$SCRIPT_DIR/restart-project.sh"
+sed "s#/etc/webhook#$ESCAPED_WEBHOOK_ROOT#g" "$REPO_ROOT/assets/scripts/restart-project.sh" > "$SCRIPT_DIR/restart-project.sh"
 
 cat > "$SCRIPT_DIR/verify-project.sh" <<'EOF'
 #!/bin/bash
@@ -64,7 +65,7 @@ case "$cmd" in
     esac
     ;;
   compose)
-    subcmd=
+    subcmd=''
     while [ "$#" -gt 0 ]; do
       case "$1" in
         -f|-p)
