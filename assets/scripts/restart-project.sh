@@ -31,7 +31,14 @@ print_service_logs() {
 }
 
 get_compose_container_ids() {
-    mapfile -t COMPOSE_CONTAINER_IDS < <(docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps -q)
+    local container_ids_output
+
+    container_ids_output=$(docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps -q)
+
+    COMPOSE_CONTAINER_IDS=()
+    if [ -n "$container_ids_output" ]; then
+        mapfile -t COMPOSE_CONTAINER_IDS <<< "$container_ids_output"
+    fi
 
     if [ "${#COMPOSE_CONTAINER_IDS[@]}" -eq 0 ]; then
         echo "WARN! Deploy for [$PROJECT_NAME] environment [$ENVIRONMENT] did not create any containers"
@@ -65,7 +72,7 @@ wait_for_container_healthchecks() {
     local healthcheck_timeout=${DEPLOY_HEALTHCHECK_TIMEOUT:-0}
     local start_time current_time container_id service_name health_status has_healthcheck pending_healthchecks
 
-    if ! [[ "$healthcheck_timeout" =~ ^[0-9]+$ ]]; then
+    if ! [[ "$healthcheck_timeout" =~ ^(0|[1-9][0-9]*)$ ]]; then
         echo "WARN! DEPLOY_HEALTHCHECK_TIMEOUT must be a non-negative integer, got [$healthcheck_timeout]"
         exit 1
     fi

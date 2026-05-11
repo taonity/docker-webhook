@@ -4,7 +4,7 @@ set -euo pipefail
 
 REPO_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 TMP_ROOT=$(mktemp -d)
-trap 'rm -rf "$TMP_ROOT"' EXIT
+trap 'if [[ -n "${TMP_ROOT:-}" && "$TMP_ROOT" == /tmp/* ]]; then rm -rf "$TMP_ROOT"; fi' EXIT
 
 SCRIPT_DIR="$TMP_ROOT/scripts"
 MOCK_BIN="$TMP_ROOT/bin"
