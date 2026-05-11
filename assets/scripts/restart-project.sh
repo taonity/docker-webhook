@@ -20,7 +20,7 @@ PROJECT_DOCKER_COMPOSE_OVERRIDE=
 COMPOSE_PROJECT_NAME=
 declare -a COMPOSE_ARGS=()
 
-print_container_logs() {
+print_service_logs() {
     local container_id=$1
     local service_name=$2
 
@@ -52,7 +52,7 @@ validate_compose_container_states() {
             *)
                 echo "WARN! Service [$service_name] is in [$container_status] state after deploy"
                 docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps
-                print_container_logs "$container_id" "$service_name"
+                print_service_logs "$container_id" "$service_name"
                 exit 1
                 ;;
         esac
@@ -98,13 +98,13 @@ wait_for_container_healthchecks() {
                 unhealthy)
                     echo "WARN! Service [$service_name] failed its health check after deploy"
                     docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps
-                    print_container_logs "$container_id" "$service_name"
+                    print_service_logs "$container_id" "$service_name"
                     exit 1
                     ;;
                 *)
                     echo "WARN! Service [$service_name] returned unexpected health status [$health_status]"
                     docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps
-                    print_container_logs "$container_id" "$service_name"
+                    print_service_logs "$container_id" "$service_name"
                     exit 1
                     ;;
             esac

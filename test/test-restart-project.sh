@@ -84,6 +84,9 @@ case "$cmd" in
         ;;
       ps)
         if [ "${1:-}" = "-q" ]; then
+          if [ "${MOCK_NO_CONTAINERS:-0}" = "1" ]; then
+            exit 0
+          fi
           echo "container-1"
         else
           echo "NAME STATUS"
@@ -142,6 +145,8 @@ run_restart_project() {
 bash -n "$SCRIPT_DIR/restart-project.sh"
 run_restart_project 0 env DEPLOY_HEALTHCHECK_TIMEOUT=5 MOCK_CONTAINER_STATUS=running MOCK_HEALTH_STATUS=healthy
 run_restart_project 1 env MOCK_CONTAINER_STATUS=exited MOCK_HEALTH_STATUS=none
+run_restart_project 1 env DEPLOY_HEALTHCHECK_TIMEOUT=5 MOCK_CONTAINER_STATUS=running MOCK_HEALTH_STATUS=unhealthy
 run_restart_project 1 env DEPLOY_HEALTHCHECK_TIMEOUT=1 MOCK_CONTAINER_STATUS=running MOCK_HEALTH_STATUS=starting
+run_restart_project 1 env MOCK_NO_CONTAINERS=1
 
 echo "restart-project.sh tests passed"
