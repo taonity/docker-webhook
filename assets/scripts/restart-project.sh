@@ -19,6 +19,8 @@ PROJECT_DOCKER_COMPOSE_FILE=
 PROJECT_DOCKER_COMPOSE_OVERRIDE=
 COMPOSE_PROJECT_NAME=
 declare -a COMPOSE_ARGS=()
+declare -a COMPOSE_CONTAINER_IDS=()
+HEALTHCHECK_POLL_INTERVAL=2
 
 print_service_logs() {
     local container_id=$1
@@ -127,7 +129,7 @@ wait_for_container_healthchecks() {
             exit 1
         fi
 
-        sleep 2
+        sleep "$HEALTHCHECK_POLL_INTERVAL"
     done
 }
 

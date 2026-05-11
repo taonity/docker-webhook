@@ -10,7 +10,7 @@ SCRIPT_DIR="$TMP_ROOT/scripts"
 MOCK_BIN="$TMP_ROOT/bin"
 SHARED_DIR="$TMP_ROOT/shared"
 WEBHOOK_ROOT="$TMP_ROOT/webhook"
-ESCAPED_WEBHOOK_ROOT=$(printf '%s\n' "$WEBHOOK_ROOT" | sed 's/[&#]/\\&/g')
+ESCAPED_WEBHOOK_ROOT=$(printf '%s\n' "$WEBHOOK_ROOT" | sed 's#[/&]#\\&#g')
 
 mkdir -p "$SCRIPT_DIR" "$MOCK_BIN" "$SHARED_DIR/envs" "$SHARED_DIR/configs" "$WEBHOOK_ROOT/cache"
 
