@@ -46,10 +46,8 @@ get_compose_container_ids() {
     fi
 }
 
-validate_compose_container_states() {
+ensure_healthcheck_containers_are_active() {
     local container_id service_name container_status
-
-    get_compose_container_ids
 
     for container_id in "${COMPOSE_CONTAINER_IDS[@]}"; do
         service_name=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}}' "$container_id")
@@ -88,7 +86,8 @@ wait_for_container_healthchecks() {
         has_healthcheck=false
         pending_healthchecks=false
 
-        validate_compose_container_states
+        get_compose_container_ids
+        ensure_healthcheck_containers_are_active
 
         for container_id in "${COMPOSE_CONTAINER_IDS[@]}"; do
             service_name=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}}' "$container_id")
@@ -191,5 +190,4 @@ docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" pull
 docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" down
 docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" up -d
 
-validate_compose_container_states
 wait_for_container_healthchecks
