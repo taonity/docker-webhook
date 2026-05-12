@@ -29,7 +29,13 @@ jobs:
           echo "Deploying project [${{ inputs.project_name }}] to [${{ inputs.environment }}]"
           echo "---"
 
-          curl --no-buffer --fail-with-body --max-time 300 \
+          response_body_file="$(mktemp)"
+          trap 'rm -f "$response_body_file"' EXIT
+
+          curl_exit=0
+          http_code=$(curl --no-buffer --silent --show-error --max-time 600 \
+            --output "$response_body_file" \
+            --write-out "%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
             -d '{
@@ -37,7 +43,21 @@ jobs:
               "repository": { "name": "${{ inputs.project_name }}" },
               "environment": "${{ inputs.environment }}"
             }' \
-            "${{ secrets.WEBHOOK_URL }}/hooks/${{ secrets.WEBHOOK_SECRET }}/docker-webhook"
+            "${{ secrets.WEBHOOK_URL }}/hooks/${{ secrets.WEBHOOK_SECRET }}/docker-webhook") || curl_exit=$?
 
+          echo "HTTP status: ${http_code:-N/A}"
+          echo "--- Response body ---"
+          cat "$response_body_file"
           echo ""
+
+          if [ "$curl_exit" -ne 0 ]; then
+            echo "--- Deployment request failed due to network/transport error ---"
+            exit "$curl_exit"
+          fi
+
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "--- Deployment failed ---"
+            exit 1
+          fi
+
           echo "--- Deployment completed successfully ---"
