@@ -41,7 +41,7 @@ get_compose_container_ids() {
     fi
 
     if [ "${#COMPOSE_CONTAINER_IDS[@]}" -eq 0 ]; then
-        echo "WARN! Deploy for [$PROJECT_NAME] environment [$ENVIRONMENT] did not create any containers"
+        echo "ERROR! Deploy for [$PROJECT_NAME] environment [$ENVIRONMENT] did not create any containers"
         exit 1
     fi
 }
@@ -57,7 +57,7 @@ ensure_healthcheck_containers_are_active() {
             running)
                 ;;
             *)
-                echo "WARN! Service [$service_name] is in [$container_status] state after deploy"
+                echo "ERROR! Service [$service_name] is in [$container_status] state after deploy"
                 docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps
                 print_service_logs "$container_id" "$service_name"
                 exit 1
@@ -71,7 +71,7 @@ wait_for_container_healthchecks() {
     local start_time current_time container_id service_name health_status has_healthcheck pending_healthchecks
 
     if ! [[ "$healthcheck_timeout" =~ ^(0|[1-9][0-9]*)$ ]]; then
-        echo "WARN! DEPLOY_HEALTHCHECK_TIMEOUT must be a non-negative integer, got [$healthcheck_timeout]"
+        echo "ERROR! DEPLOY_HEALTHCHECK_TIMEOUT must be a non-negative integer, got [$healthcheck_timeout]"
         exit 1
     fi
 
@@ -104,13 +104,13 @@ wait_for_container_healthchecks() {
                     pending_healthchecks=true
                     ;;
                 unhealthy)
-                    echo "WARN! Service [$service_name] failed its health check after deploy"
+                    echo "ERROR! Service [$service_name] failed its health check after deploy"
                     docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps
                     print_service_logs "$container_id" "$service_name"
                     exit 1
                     ;;
                 *)
-                    echo "WARN! Service [$service_name] returned unexpected health status [$health_status]"
+                    echo "ERROR! Service [$service_name] returned unexpected health status [$health_status]"
                     docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps
                     print_service_logs "$container_id" "$service_name"
                     exit 1
@@ -130,7 +130,7 @@ wait_for_container_healthchecks() {
 
         current_time=$(date +%s)
         if [ $((current_time - start_time)) -ge "$healthcheck_timeout" ]; then
-            echo "WARN! Timed out waiting [$healthcheck_timeout] seconds for container health checks"
+            echo "ERROR! Timed out waiting [$healthcheck_timeout] seconds for container health checks"
             docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" ps
             exit 1
         fi
