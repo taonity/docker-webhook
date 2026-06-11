@@ -6,6 +6,10 @@ cd "$(dirname $0)"
 
 . ../util.sh
 
+# Build test fixture image that the webhook will pull and extract
+info "Building test fixture image"
+docker build -t generaltao725/webhook-test-image-backend -q ./test-image
+
 info "Starting docker-webhook service"
 docker compose up -d --quiet-pull
 

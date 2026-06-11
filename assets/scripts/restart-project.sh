@@ -164,7 +164,14 @@ COMPOSE_PROJECT_NAME="${PROJECT_NAME}-${ENVIRONMENT}"
 # Create if not exists a directory for project files
 mkdir -p "$PROJECT_CACHE_PATH"
 # Pull a latest repository
-docker pull "$REPO_NAME"
+if ! docker pull "$REPO_NAME"; then
+    echo "WARN! Failed to pull [$REPO_NAME] from registry, checking if image exists locally"
+    if ! docker image inspect "$REPO_NAME" > /dev/null 2>&1; then
+        echo "ERROR! Image [$REPO_NAME] not found locally either"
+        exit 1
+    fi
+    echo "Using local image [$REPO_NAME]"
+fi
 # Clear the directory for project files
 rm -rf "$PROJECT_CACHE_PATH"/*
 # Create a temp directory for extraction
