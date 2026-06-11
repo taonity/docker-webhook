@@ -142,10 +142,23 @@ wait_for_container_healthchecks() {
 # Check if project name is present in project-whitelist.list
 ./verify-project.sh "$PROJECT_NAME"
 
+# Determine image name: append "-backend" suffix unless project is in no-backend-suffix.list
+NO_BACKEND_SUFFIX_LIST="${SHARED_DIR_PATH}/configs/no-backend-suffix.list"
+IMAGE_NAME="${PROJECT_NAME}-backend"
+if [ -f "$NO_BACKEND_SUFFIX_LIST" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+        line=$(echo "$line" | tr -d '\r')
+        if [ "$line" = "$PROJECT_NAME" ]; then
+            IMAGE_NAME="${PROJECT_NAME}"
+            break
+        fi
+    done < "$NO_BACKEND_SUFFIX_LIST"
+fi
+
 # Use environment-specific paths
 PROJECT_CACHE_PATH="/etc/webhook/cache/${PROJECT_NAME}-${ENVIRONMENT}"
 PROJECT_ENVS_PATH="${SHARED_DIR_PATH}/envs/${PROJECT_NAME}-${ENVIRONMENT}"
-REPO_NAME="${DOCKER_USERNAME}/${PROJECT_NAME}"
+REPO_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}"
 COMPOSE_PROJECT_NAME="${PROJECT_NAME}-${ENVIRONMENT}"
 
 # Create if not exists a directory for project files
