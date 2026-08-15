@@ -1,0 +1,50 @@
+name: Notify (ntfy)
+
+on:
+  workflow_call:
+    inputs:
+      status:
+        description: 'Result of the Docker image publish job'
+        required: true
+        type: string
+    secrets:
+      NTFY_URL:
+        description: 'Base URL of the ntfy server'
+        required: true
+      NTFY_TOPIC:
+        description: 'Topic name to publish to'
+        required: true
+      NTFY_TOKEN:
+        description: 'ntfy access token with write access to the topic'
+        required: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send ntfy image publish notification
+        env:
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+          STATUS: ${{ inputs.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [[ "$STATUS" == "success" ]]; then
+            title="Docker image published"
+            priority="default"
+            tags="white_check_mark,package"
+          else
+            title="Docker image publish ${STATUS}"
+            priority="high"
+            tags="x,rotating_light"
+          fi
+
+          curl -sSf \
+            -H "Authorization: Bearer ${NTFY_TOKEN}" \
+            -H "Title: ${title}" \
+            -H "Priority: ${priority}" \
+            -H "Tags: ${tags}" \
+            -H "Click: ${RUN_URL}" \
+            -d "docker-webhook ${GITHUB_REF_NAME} @ ${GITHUB_SHA:0:7}" \
+            "${NTFY_URL%/}/${NTFY_TOPIC}"

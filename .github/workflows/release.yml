@@ -77,3 +77,15 @@ jobs:
           push: true
           platforms: linux/amd64
           tags: ${{ steps.make_release_tags.outputs.tags }}
+
+  notify:
+    name: Notify image publish result
+    needs: push_to_registry
+    if: always()
+    uses: ./.github/workflows/notify.yml
+    with:
+      status: ${{ needs.push_to_registry.result }}
+    secrets:
+      NTFY_URL: ${{ secrets.NTFY_URL }}
+      NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+      NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
