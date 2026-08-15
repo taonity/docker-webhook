@@ -17,6 +17,7 @@ echo "Deploying project [$PROJECT_NAME] to environment [$ENVIRONMENT]"
 
 PROJECT_DOCKER_COMPOSE_FILE=
 PROJECT_DOCKER_COMPOSE_OVERRIDE=
+PROJECT_DOCKER_COMPOSE_PRODENV=
 COMPOSE_PROJECT_NAME=
 declare -a COMPOSE_ARGS=()
 declare -a COMPOSE_CONTAINER_IDS=()
@@ -194,16 +195,24 @@ fi
 
 PROJECT_DOCKER_COMPOSE_FILE="$PROJECT_CACHE_PATH/docker-compose.yml"
 PROJECT_DOCKER_COMPOSE_OVERRIDE="$PROJECT_CACHE_PATH/docker-compose.override.yml"
+PROJECT_DOCKER_COMPOSE_PRODENV="$PROJECT_CACHE_PATH/docker-compose.prodenv.yml"
 
 # RESTART PROCESS
 
-# Build docker compose command with override file if it exists
+# Build docker compose command with override files if they exist
 COMPOSE_ARGS=(-f "$PROJECT_DOCKER_COMPOSE_FILE")
 if [ -f "$PROJECT_DOCKER_COMPOSE_OVERRIDE" ]; then
     echo "Docker compose override file found for [$PROJECT_NAME] environment [$ENVIRONMENT]"
     COMPOSE_ARGS+=(-f "$PROJECT_DOCKER_COMPOSE_OVERRIDE")
 else
     echo "No docker compose override file for [$PROJECT_NAME] environment [$ENVIRONMENT]"
+fi
+
+if [ -f "$PROJECT_DOCKER_COMPOSE_PRODENV" ]; then
+    echo "Docker compose prodenv file found for [$PROJECT_NAME] environment [$ENVIRONMENT]"
+    COMPOSE_ARGS+=(-f "$PROJECT_DOCKER_COMPOSE_PRODENV")
+else
+    echo "No docker compose prodenv file for [$PROJECT_NAME] environment [$ENVIRONMENT]"
 fi
 
 docker compose "${COMPOSE_ARGS[@]}" -p "$COMPOSE_PROJECT_NAME" pull

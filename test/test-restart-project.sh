@@ -10,6 +10,7 @@ SCRIPT_DIR="$TMP_ROOT/scripts"
 MOCK_BIN="$TMP_ROOT/bin"
 SHARED_DIR="$TMP_ROOT/shared"
 WEBHOOK_ROOT="$TMP_ROOT/webhook"
+DOCKER_LOG="$TMP_ROOT/docker.log"
 ESCAPED_WEBHOOK_ROOT=$(printf '%s\n' "$WEBHOOK_ROOT" | sed 's#[/&]#\\&#g')
 
 mkdir -p "$SCRIPT_DIR" "$MOCK_BIN" "$SHARED_DIR/envs" "$SHARED_DIR/configs" "$WEBHOOK_ROOT/cache"
@@ -30,6 +31,14 @@ services:
   app:
     image: example/app:latest
 YAML
+if [ "${MOCK_INCLUDE_PRODENV:-0}" = "1" ]; then
+  cat > "$3/docker/docker-compose.prodenv.yml" <<'YAML'
+services:
+  app:
+    environment:
+      APP_ENV: production
+YAML
+fi
 EOF
 
 cat > "$MOCK_BIN/docker" <<'EOF'
@@ -65,6 +74,9 @@ case "$cmd" in
     esac
     ;;
   compose)
+    if [ -n "${MOCK_DOCKER_LOG:-}" ]; then
+      printf '%s\n' "$*" >> "$MOCK_DOCKER_LOG"
+    fi
     subcmd=''
     while [ "$#" -gt 0 ]; do
       case "$1" in
@@ -151,5 +163,12 @@ run_restart_project 1 env DEPLOY_HEALTHCHECK_TIMEOUT=5 MOCK_CONTAINER_STATUS=exi
 run_restart_project 1 env DEPLOY_HEALTHCHECK_TIMEOUT=5 MOCK_CONTAINER_STATUS=running MOCK_HEALTH_STATUS=unhealthy
 run_restart_project 1 env DEPLOY_HEALTHCHECK_TIMEOUT=1 MOCK_CONTAINER_STATUS=running MOCK_HEALTH_STATUS=starting
 run_restart_project 1 env DEPLOY_HEALTHCHECK_TIMEOUT=5 MOCK_NO_CONTAINERS=1
+
+: > "$DOCKER_LOG"
+run_restart_project 0 env MOCK_INCLUDE_PRODENV=1 MOCK_DOCKER_LOG="$DOCKER_LOG"
+if [ "$(grep -c -- "-f $WEBHOOK_ROOT/cache/project-stage/docker-compose.prodenv.yml" "$DOCKER_LOG")" -ne 3 ]; then
+  echo "Expected docker-compose.prodenv.yml in all deployment compose commands" >&2
+  exit 1
+fi
 
 echo "restart-project.sh tests passed"
