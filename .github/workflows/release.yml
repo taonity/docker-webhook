@@ -41,6 +41,8 @@ jobs:
     name: Build & Push image to DockerHub
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    outputs:
+      image_version: ${{ steps.make_release_tags.outputs.image_version }}
     permissions:
       packages: write
       contents: read
@@ -63,6 +65,7 @@ jobs:
           image_name=${{ secrets.DOCKER_USERNAME }}/${PWD##*/}
           tags=$image_name:latest,$image_name:$tag
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
+          echo "image_version=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -85,6 +88,7 @@ jobs:
     uses: ./.github/workflows/notify.yml
     with:
       status: ${{ needs.push_to_registry.result }}
+      image_version: ${{ needs.push_to_registry.outputs.image_version }}
     secrets:
       NTFY_URL: ${{ secrets.NTFY_URL }}
       NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}

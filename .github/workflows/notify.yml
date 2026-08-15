@@ -7,6 +7,10 @@ on:
         description: 'Result of the Docker image publish job'
         required: true
         type: string
+      image_version:
+        description: 'Published Docker image version'
+        required: false
+        type: string
     secrets:
       NTFY_URL:
         description: 'Base URL of the ntfy server'
@@ -28,6 +32,7 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           STATUS: ${{ inputs.status }}
+          IMAGE_VERSION: ${{ inputs.image_version }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [[ "$STATUS" == "success" ]]; then
@@ -46,5 +51,5 @@ jobs:
             -H "Priority: ${priority}" \
             -H "Tags: ${tags}" \
             -H "Click: ${RUN_URL}" \
-            -d "docker-webhook ${GITHUB_REF_NAME} @ ${GITHUB_SHA:0:7}" \
+            -d "docker-webhook:${IMAGE_VERSION:-unknown} ${GITHUB_REF_NAME} @ ${GITHUB_SHA:0:7}" \
             "${NTFY_URL%/}/${NTFY_TOPIC}"
