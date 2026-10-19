@@ -162,6 +162,21 @@ PROJECT_ENVS_PATH="${SHARED_DIR_PATH}/envs/${PROJECT_NAME}-${ENVIRONMENT}"
 REPO_NAME="${DOCKER_USERNAME}/${IMAGE_NAME}"
 COMPOSE_PROJECT_NAME="${PROJECT_NAME}-${ENVIRONMENT}"
 
+MANAGED_DEPLOYMENT=false
+case ",${DOCKER_WEBHOOK_DOPPLER_MANAGED_DEPLOYMENTS:-}," in
+    *,"$COMPOSE_PROJECT_NAME",*) MANAGED_DEPLOYMENT=true ;;
+esac
+if [ "$MANAGED_DEPLOYMENT" = true ]; then
+    case "$COMPOSE_PROJECT_NAME" in
+        fullstack-starter-stage|fullstack-starter-prod) ;;
+        *) echo 'Unsupported managed deployment.' >&2; exit 1 ;;
+    esac
+    if [ ! -S /run/prodenv-doppler/deploy.sock ]; then
+        echo 'Doppler broker is unavailable; legacy deployment is disabled for this project.' >&2
+        exit 1
+    fi
+fi
+
 # Create if not exists a directory for project files
 mkdir -p "$PROJECT_CACHE_PATH"
 # Pull a latest repository
@@ -185,6 +200,18 @@ mv "$TEMP_EXTRACT_PATH"/docker/* "$PROJECT_CACHE_PATH"/
 # Clean up temp directory
 rm -rf "$TEMP_EXTRACT_PATH"
 chown -R 1000:1000 "$PROJECT_CACHE_PATH"
+if [ "$MANAGED_DEPLOYMENT" = true ]; then
+    if [ ! -f "$PROJECT_CACHE_PATH/credentials-files.yml" ] || [ ! -f "$PROJECT_CACHE_PATH/docker-compose.secrets.yml" ]; then
+        echo 'Publish the secret-file application templates before enabling managed deployment.' >&2
+        exit 1
+    fi
+    find "$PROJECT_CACHE_PATH" -type f -name '.env*' -delete
+    curl --fail --silent --show-error --max-time 1800 \
+        --unix-socket /run/prodenv-doppler/deploy.sock \
+        --header 'Content-Type: application/json' \
+        --data "{\"deployment\":\"$COMPOSE_PROJECT_NAME\"}" http://localhost/deploy
+    exit 0
+fi
 # Copy there env files if any provided
 if [ -d "$PROJECT_ENVS_PATH" ]; then
     echo "Env file for project [$PROJECT_NAME] environment [$ENVIRONMENT] was found"

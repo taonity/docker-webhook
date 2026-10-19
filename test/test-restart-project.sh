@@ -12,10 +12,12 @@ SHARED_DIR="$TMP_ROOT/shared"
 WEBHOOK_ROOT="$TMP_ROOT/webhook"
 DOCKER_LOG="$TMP_ROOT/docker.log"
 ESCAPED_WEBHOOK_ROOT=$(printf '%s\n' "$WEBHOOK_ROOT" | sed 's#[/&]#\\&#g')
+SOCKET_ROOT="$TMP_ROOT/socket"
+ESCAPED_SOCKET_ROOT=$(printf '%s\n' "$SOCKET_ROOT" | sed 's#[/&]#\\&#g')
 
-mkdir -p "$SCRIPT_DIR" "$MOCK_BIN" "$SHARED_DIR/envs" "$SHARED_DIR/configs" "$WEBHOOK_ROOT/cache"
+mkdir -p "$SCRIPT_DIR" "$MOCK_BIN" "$SHARED_DIR/envs" "$SHARED_DIR/configs" "$WEBHOOK_ROOT/cache" "$SOCKET_ROOT"
 
-sed "s#/etc/webhook#$ESCAPED_WEBHOOK_ROOT#g" "$REPO_ROOT/assets/scripts/restart-project.sh" > "$SCRIPT_DIR/restart-project.sh"
+sed -e "s#/etc/webhook#$ESCAPED_WEBHOOK_ROOT#g" -e "s#/run/prodenv-doppler#$ESCAPED_SOCKET_ROOT#g" "$REPO_ROOT/assets/scripts/restart-project.sh" > "$SCRIPT_DIR/restart-project.sh"
 
 cat > "$SCRIPT_DIR/verify-project.sh" <<'EOF'
 #!/bin/bash
@@ -38,6 +40,10 @@ services:
     environment:
       APP_ENV: production
 YAML
+fi
+if [ "${MOCK_INCLUDE_SECRETS:-0}" = "1" ]; then
+  printf 'services: {}\n' > "$3/docker/credentials-files.yml"
+  printf 'services: {}\n' > "$3/docker/docker-compose.secrets.yml"
 fi
 EOF
 
@@ -124,12 +130,20 @@ cat > "$MOCK_BIN/chown" <<'EOF'
 exit 0
 EOF
 
+cat > "$MOCK_BIN/curl" <<'EOF'
+#!/bin/bash
+set -eu
+printf '%s\n' "$*" >> "$MOCK_CURL_LOG"
+exit "${MOCK_BROKER_EXIT:-0}"
+EOF
+
 chmod +x \
   "$SCRIPT_DIR/restart-project.sh" \
   "$SCRIPT_DIR/verify-project.sh" \
   "$SCRIPT_DIR/extract-file.sh" \
   "$MOCK_BIN/docker" \
-  "$MOCK_BIN/chown"
+  "$MOCK_BIN/chown" \
+  "$MOCK_BIN/curl"
 
 printf 'project\n' > "$SHARED_DIR/configs/project-whitelist.list"
 
@@ -144,7 +158,7 @@ run_restart_project() {
       SHARED_DIR_PATH="$SHARED_DIR" \
       DOCKER_USERNAME=tester \
       "$@" \
-      ./restart-project.sh project stage
+      ./restart-project.sh "${TEST_PROJECT:-project}" stage
   ) >/dev/null 2>&1
   local status=$?
   set -e
@@ -170,5 +184,29 @@ if [ "$(grep -c -- "-f $WEBHOOK_ROOT/cache/project-stage/docker-compose.prodenv.
   echo "Expected docker-compose.prodenv.yml in all deployment compose commands" >&2
   exit 1
 fi
+
+TEST_PROJECT=fullstack-starter
+mkdir -p "$SHARED_DIR/envs/fullstack-starter-stage"
+printf 'FIXTURE_PASSWORD=must-not-copy\n' > "$SHARED_DIR/envs/fullstack-starter-stage/.env"
+CURL_LOG="$TMP_ROOT/curl.log"
+: > "$CURL_LOG"
+: > "$DOCKER_LOG"
+run_restart_project 1 env DOCKER_WEBHOOK_DOPPLER_MANAGED_DEPLOYMENTS=fullstack-starter-stage MOCK_INCLUDE_SECRETS=1 MOCK_CURL_LOG="$CURL_LOG"
+python3 - "$SOCKET_ROOT/deploy.sock" <<'PY'
+import socket
+import sys
+server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+server.bind(sys.argv[1])
+server.close()
+PY
+run_restart_project 1 env DOCKER_WEBHOOK_DOPPLER_MANAGED_DEPLOYMENTS=fullstack-starter-stage MOCK_CURL_LOG="$CURL_LOG"
+printf 'OLD_FIXTURE_PASSWORD=must-not-survive\n' > "$WEBHOOK_ROOT/cache/fullstack-starter-stage/.env"
+run_restart_project 22 env DOCKER_WEBHOOK_DOPPLER_MANAGED_DEPLOYMENTS=fullstack-starter-stage MOCK_INCLUDE_SECRETS=1 MOCK_CURL_LOG="$CURL_LOG" MOCK_DOCKER_LOG="$DOCKER_LOG" MOCK_BROKER_EXIT=22
+run_restart_project 0 env DOCKER_WEBHOOK_DOPPLER_MANAGED_DEPLOYMENTS=fullstack-starter-stage MOCK_INCLUDE_SECRETS=1 MOCK_CURL_LOG="$CURL_LOG" MOCK_DOCKER_LOG="$DOCKER_LOG"
+[ ! -e "$WEBHOOK_ROOT/cache/fullstack-starter-stage/.env" ]
+[ ! -s "$DOCKER_LOG" ]
+[ "$(wc -l < "$CURL_LOG")" -eq 2 ]
+grep -q -- '--unix-socket' "$CURL_LOG"
+grep -q 'fullstack-starter-stage' "$CURL_LOG"
 
 echo "restart-project.sh tests passed"
